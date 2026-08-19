@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Match</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>🧠 Memory Match</h1>
+  <p class="subtitle">Flip two cards. Find every pair. Beat your best score.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="val" id="movesVal">0</div><div class="lbl">Moves</div></div>
+    <div class="stat"><div class="val" id="timeVal">0:00</div><div class="lbl">Time</div></div>
+    <div class="stat"><div class="val" id="pairsVal">0/0</div><div class="lbl">Pairs</div></div>
+    <div class="stat"><div class="val" id="bestVal">–</div><div class="lbl">Best moves</div></div>
+  </div>
+
+  <div class="controls">
+    <select id="difficulty" aria-label="Difficulty">
+      <option value="4x3">Easy (4×3)</option>
+      <option value="4x4" selected>Medium (4×4)</option>
+      <option value="6x4">Hard (6×4)</option>
+    </select>
+    <button class="action" id="restartBtn">🔄 New Game</button>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="win-banner" id="winBanner">
+    <div class="title" id="winTitle">🎉 You matched them all!</div>
+    <div class="desc" id="winDesc"></div>
+  </div>
+
+  <footer>Best scores are remembered per difficulty on this device.</footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
