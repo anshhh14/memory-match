@@ -17,7 +17,7 @@
     <div class="stat"><div class="val" id="movesVal">0</div><div class="lbl">Moves</div></div>
     <div class="stat"><div class="val" id="timeVal">0:00</div><div class="lbl">Time</div></div>
     <div class="stat"><div class="val" id="pairsVal">0/0</div><div class="lbl">Pairs</div></div>
-    <div class="stat"><div class="val" id="bestVal">–</div><div class="lbl">Best moves</div></div>
+    <div class="stat"><div class="val" id="bestVal">–</div><div class="lbl">Best Score</div></div>
   </div>
 
   <div class="controls">
@@ -25,6 +25,7 @@
       <option value="4x3">Easy (4×3)</option>
       <option value="4x4" selected>Medium (4×4)</option>
       <option value="6x4">Hard (6×4)</option>
+      <option value="6x6">Expert (6×6)</option>
     </select>
     <button class="action" id="restartBtn">🔄 New Game</button>
     <button class="icon-btn" id="soundBtn" aria-label="Toggle sound" title="Toggle sound">🔊</button>
@@ -57,6 +58,7 @@
         <button class="tab" data-diff="4x3">Easy</button>
         <button class="tab active" data-diff="4x4">Medium</button>
         <button class="tab" data-diff="6x4">Hard</button>
+        <button class="tab" data-diff="6x6">Expert</button>
       </div>
       <ol class="board-list" id="leaderboardList"></ol>
     </div>
