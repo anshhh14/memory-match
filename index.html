@@ -27,6 +27,8 @@
       <option value="6x4">Hard (6×4)</option>
     </select>
     <button class="action" id="restartBtn">🔄 New Game</button>
+    <button class="icon-btn" id="soundBtn" aria-label="Toggle sound" title="Toggle sound">🔊</button>
+    <button class="icon-btn" id="leaderboardBtn" aria-label="View leaderboard" title="Leaderboard">🏆</button>
   </div>
 
   <div class="board" id="board"></div>
@@ -34,9 +36,33 @@
   <div class="win-banner" id="winBanner">
     <div class="title" id="winTitle">🎉 You matched them all!</div>
     <div class="desc" id="winDesc"></div>
+    <div class="name-entry" id="nameEntry">
+      <div class="name-entry-lbl" id="nameEntryLbl">🏅 New high score! Enter your name:</div>
+      <div class="name-entry-row">
+        <input type="text" id="nameInput" maxlength="16" placeholder="Your name" autocomplete="off">
+        <button class="action small" id="saveScoreBtn">Save</button>
+      </div>
+    </div>
   </div>
 
-  <footer>Best scores are remembered per difficulty on this device.</footer>
+  <footer>Best scores &amp; leaderboard are remembered per difficulty on this device.</footer>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-head">
+        <h2>🏆 Leaderboard</h2>
+        <button class="icon-btn" id="closeModalBtn" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-tabs" id="modalTabs">
+        <button class="tab" data-diff="4x3">Easy</button>
+        <button class="tab active" data-diff="4x4">Medium</button>
+        <button class="tab" data-diff="6x4">Hard</button>
+      </div>
+      <ol class="board-list" id="leaderboardList"></ol>
+    </div>
+  </div>
+
+  <div class="confetti-layer" id="confettiLayer"></div>
 
   <script src="script.js"></script>
 </body>
