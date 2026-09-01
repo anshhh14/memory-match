@@ -140,7 +140,7 @@ async function saveBest(diff, val){
 }
 
 // ---------- leaderboard (top 5 per difficulty) ----------
-const LB_SIZE = 5;
+const LB_SIZE = 20;
 async function loadLeaderboard(diff){
   const list = await storageGet('memory:leaderboard:' + diff);
   if (!Array.isArray(list)) return [];
