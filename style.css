@@ -364,7 +364,13 @@ footer{
   text-align:center;
 }
 
+.board.board-xl .card{ width: 64px; height: 64px; }
+.board.board-xl .face.front{ font-size: 28px; }
+.board.board-xl .face.back::after{ font-size: 20px; }
+
 @media (max-width: 480px){
   .card{ width: 68px; height: 68px; }
   .face.front{ font-size: 30px; }
+  .board.board-xl .card{ width: 46px; height: 46px; }
+  .board.board-xl .face.front{ font-size: 20px; }
 }
