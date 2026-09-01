@@ -1,4 +1,7 @@
-const EMOJI_SET = ['🍇','🍉','🍋','🍓','🍒','🥝','🍍','🥥','🍑','🍌','🥑','🍈'];
+const EMOJI_SET = ['🍇','🍉','🍋','🍓','🍒','🥝','🍍','🥥','🍑','🍌','🥑','🍈','🍏','🍊','🍐','🍅','🥭','🍋‍🟩'];
+
+// Par time (seconds) and difficulty labels used by the scoring formula and UI
+const PAR_TIME = { '4x3': 30, '4x4': 60, '6x4': 100, '6x6': 160 };
 
 const boardEl = document.getElementById('board');
 const movesVal = document.getElementById('movesVal');
@@ -33,6 +36,7 @@ let seconds = 0;
 let gameStarted = false;
 let soundOn = (localStorage.getItem('memory:sound') !== 'off');
 let pendingRank = null; // index in leaderboard this run would occupy, if any
+let pendingRun = null;  // { score, moves, seconds } for the run awaiting a leaderboard save
 let activeModalDiff = '4x4';
 
 // ---------- sound engine (WebAudio synth, no external files) ----------
@@ -124,7 +128,12 @@ async function storageSet(key, val){
 }
 
 async function loadBest(diff){
-  return storageGet('memory:best:' + diff);
+  const best = await storageGet('memory:best:' + diff);
+  if (best && typeof best.score !== 'number' && typeof best.moves === 'number'){
+    // Legacy record from before the scoring formula existed - recompute a score for it.
+    return { score: calcScore(diff, best.moves, best.seconds || PAR_TIME[diff] || 60), moves: best.moves, seconds: best.seconds };
+  }
+  return best;
 }
 async function saveBest(diff, val){
   return storageSet('memory:best:' + diff, val);
@@ -134,28 +143,54 @@ async function saveBest(diff, val){
 const LB_SIZE = 5;
 async function loadLeaderboard(diff){
   const list = await storageGet('memory:leaderboard:' + diff);
-  return Array.isArray(list) ? list : [];
+  if (!Array.isArray(list)) return [];
+  // Backfill a score for entries saved before the scoring formula existed.
+  return list.map(entry => typeof entry.score === 'number'
+    ? entry
+    : { ...entry, score: calcScore(diff, entry.moves, entry.seconds) });
 }
 async function saveLeaderboard(diff, list){
   return storageSet('memory:leaderboard:' + diff, list);
 }
-// Returns the rank (0-based) a score of {moves, seconds} would earn, or null if it doesn't make the top 5
-function rankForScore(list, moves, seconds){
-  const idx = list.findIndex(entry => moves < entry.moves || (moves === entry.moves && seconds < entry.seconds));
+// Higher score wins; fewer moves then less time break ties. Negative = a ranks above b.
+function compareRuns(a, b){
+  if (a.score !== b.score) return b.score - a.score;
+  if (a.moves !== b.moves) return a.moves - b.moves;
+  return a.seconds - b.seconds;
+}
+function beats(a, b){ return compareRuns(a, b) < 0; }
+// Returns the rank (0-based) a run of {score, moves, seconds} would earn, or null if it doesn't make the top 5
+function rankForScore(list, score, moves, seconds){
+  const candidate = { score, moves, seconds };
+  const idx = list.findIndex(entry => beats(candidate, entry));
   if (list.length < LB_SIZE) return idx === -1 ? list.length : idx;
   return idx === -1 ? null : idx;
 }
-async function addToLeaderboard(diff, name, moves, seconds){
+async function addToLeaderboard(diff, name, score, moves, seconds){
   const list = await loadLeaderboard(diff);
-  list.push({ name: name || 'Anonymous', moves, seconds, date: Date.now() });
-  list.sort((a, b) => a.moves - b.moves || a.seconds - b.seconds);
+  list.push({ name: name || 'Anonymous', score, moves, seconds, date: Date.now() });
+  list.sort(compareRuns);
   const trimmed = list.slice(0, LB_SIZE);
   await saveLeaderboard(diff, trimmed);
   return trimmed;
 }
 
 function diffLabel(diff){
-  return { '4x3': 'Easy', '4x4': 'Medium', '6x4': 'Hard' }[diff] || diff;
+  return { '4x3': 'Easy', '4x4': 'Medium', '6x4': 'Hard', '6x6': 'Expert' }[diff] || diff;
+}
+
+// ---------- scoring ----------
+// Score out of 100, blending move-efficiency (pairs / moves) and time-efficiency
+// (par time / actual time) against a per-difficulty target. Perfect, instant play
+// caps at 100 - it never goes higher, and never drops below 0.
+function calcScore(diffVal, moves, seconds){
+  const { c, r } = parseDifficulty(diffVal);
+  const pairCount = (c * r) / 2;
+  const par = PAR_TIME[diffVal] || 60;
+  const moveEfficiency = Math.min(1, pairCount / moves);       // 1 = matched every pair first try
+  const timeEfficiency = Math.min(1, par / Math.max(seconds, 1)); // 1 = finished at/under par time
+  const score = Math.round(100 * (0.6 * moveEfficiency + 0.4 * timeEfficiency));
+  return Math.max(0, Math.min(100, score));
 }
 
 async function renderLeaderboard(diff){
@@ -170,7 +205,7 @@ async function renderLeaderboard(diff){
     <li>
       <span class="rank">${i + 1}</span>
       <span class="lb-name">${escapeHtml(entry.name)}</span>
-      <span class="lb-score">${entry.moves} moves · ${formatTime(entry.seconds)}</span>
+      <span class="lb-score">${entry.score} pts · ${entry.moves} moves · ${formatTime(entry.seconds)}</span>
     </li>
   `).join('');
 }
@@ -220,6 +255,7 @@ async function buildBoard(){
   winBanner.classList.remove('show');
   nameEntry.classList.remove('show');
   pendingRank = null;
+  pendingRun = null;
   lockBoard = false;
   flipped = [];
   matchedCount = 0;
@@ -238,7 +274,7 @@ async function buildBoard(){
   pairsVal.textContent = `0/${pairCount}`;
 
   const best = await loadBest(diffVal);
-  bestVal.textContent = best ? best.moves : '–';
+  bestVal.textContent = best ? best.score : '–';
 
   const chosenEmoji = shuffle(EMOJI_SET.slice()).slice(0, pairCount);
   const deck = shuffle([...chosenEmoji, ...chosenEmoji]);
@@ -246,6 +282,7 @@ async function buildBoard(){
   cards = deck.map((symbol, idx) => ({ id: idx, symbol, matched: false }));
 
   boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  boardEl.classList.toggle('board-xl', totalCards > 16);
   boardEl.innerHTML = '';
 
   cards.forEach(card => {
@@ -326,20 +363,22 @@ async function finishGame(){
   SFX.win();
   fireConfetti();
   const diffVal = difficultySelect.value;
+  const score = calcScore(diffVal, moves, seconds);
   const best = await loadBest(diffVal);
   let newBest = false;
-  if (!best || moves < best.moves){
-    await saveBest(diffVal, { moves, seconds });
-    bestVal.textContent = moves;
+  if (!best || score > best.score){
+    await saveBest(diffVal, { score, moves, seconds });
+    bestVal.textContent = score;
     newBest = true;
   }
   winTitle.textContent = newBest ? '🏆 New best score!' : '🎉 You matched them all!';
-  winDesc.textContent = `${moves} moves · ${formatTime(seconds)}`;
+  winDesc.textContent = `${score} pts · ${moves} moves · ${formatTime(seconds)}`;
   winBanner.classList.add('show');
 
   const lb = await loadLeaderboard(diffVal);
-  pendingRank = rankForScore(lb, moves, seconds);
+  pendingRank = rankForScore(lb, score, moves, seconds);
   if (pendingRank !== null){
+    pendingRun = { score, moves, seconds };
     nameEntryLbl.textContent = pendingRank === 0
       ? `🥇 #1 on the ${diffLabel(diffVal)} leaderboard! Enter your name:`
       : `🏅 Top ${LB_SIZE} score! Enter your name:`;
@@ -348,16 +387,18 @@ async function finishGame(){
     saveScoreBtn.disabled = false;
     setTimeout(() => nameInput.focus(), 200);
   } else {
+    pendingRun = null;
     nameEntry.classList.remove('show');
   }
 }
 
 saveScoreBtn.addEventListener('click', async () => {
-  if (pendingRank === null) return;
+  if (pendingRank === null || !pendingRun) return;
   saveScoreBtn.disabled = true;
   const diffVal = difficultySelect.value;
-  await addToLeaderboard(diffVal, nameInput.value.trim(), moves, seconds);
+  await addToLeaderboard(diffVal, nameInput.value.trim(), pendingRun.score, pendingRun.moves, pendingRun.seconds);
   pendingRank = null;
+  pendingRun = null;
   nameEntry.classList.remove('show');
 });
 nameInput.addEventListener('keydown', (e) => {
